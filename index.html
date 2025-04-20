@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusMate - Productivity Companion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles */
+        .theme-study {
+            --primary: #3b82f6;
+            --secondary: #93c5fd;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --accent: #60a5fa;
+            --card: #ffffff;
+        }
+        
+        .theme-coding {
+            --primary: #10b981;
+            --secondary: #6ee7b7;
+            --bg: #1e293b;
+            --text: #e2e8f0;
+            --accent: #10b981;
+            --card: #334155;
+        }
+        
+        .theme-exercise {
+            --primary: #f97316;
+            --secondary: #fdba74;
+            --bg: #fff7ed;
+            --text: #431407;
+            --accent: #ea580c;
+            --card: #ffffff;
+        }
+        
+        .theme-yoga {
+            --primary: #84cc16;
+            --secondary: #bef264;
+            --bg: #f7fee7;
+            --text: #365314;
+            --accent: #65a30d;
+            --card: #ffffff;
+        }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+        
+        .card {
+            background-color: var(--card);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--accent);
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: var(--text);
+        }
+        
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        
+        .quote-container {
+            min-height: 120px;
+        }
+        
+        /* Animation for focus mode */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Task item drag styling */
+        .task-item {
+            transition: transform 0.2s ease;
+        }
+        
+        .task-item.dragging {
+            opacity: 0.5;
+            background-color: var(--secondary);
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .timer-container {
+                margin-bottom: 2rem;
+            }
+        }
+    </style>
+</head>
+<body class="theme-study min-h-screen font-sans">
+    <!-- Navigation -->
+    <nav class="bg-white bg-opacity-90 shadow-sm fixed w-full z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-brain text-blue-500 text-2xl mr-2"></i>
+                        <span class="text-xl font-semibold text-gray-900">FocusMate</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <button id="settings-btn" class="p-2 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button id="user-btn" class="ml-2 p-2 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <i class="fas fa-user"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="pt-16 pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <!-- Theme Selector -->
+        <div class="flex justify-center mb-6 space-x-2">
+            <button data-theme="study" class="theme-btn btn-primary px-4 py-2 rounded-full flex items-center">
+                <i class="fas fa-book mr-2"></i> Study
+            </button>
+            <button data-theme="coding" class="theme-btn bg-gray-800 text-white px-4 py-2 rounded-full flex items-center">
+                <i class="fas fa-code mr-2"></i> Coding
+            </button>
+            <button data-theme="exercise" class="theme-btn bg-orange-500 text-white px-4 py-2 rounded-full flex items-center">
+                <i class="fas fa-running mr-2"></i> Exercise
+            </button>
+            <button data-theme="yoga" class="theme-btn bg-green-500 text-white px-4 py-2 rounded-full flex items-center">
+                <i class="fas fa-spa mr-2"></i> Yoga
+            </button>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="main-content flex flex-col md:flex-row gap-6">
+            <!-- Timer Section -->
+            <div class="timer-container flex-1 card rounded-xl p-6">
+                <h2 class="text-2xl font-semibold mb-4">Focus Session</h2>
+                
+                <!-- Timer Display -->
+                <div class="flex flex-col items-center justify-center mb-6">
+                    <div class="relative w-64 h-64 mb-4">
+                        <svg class="w-full h-full" viewBox="0 0 100 100">
+                            <circle class="text-gray-200" stroke-width="8" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
+                            <circle id="progress-circle" class="text-blue-500" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="0" stroke-linecap="round" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <div id="time-display" class="text-4xl font-bold">25:00</div>
+                            <div id="timer-state" class="text-lg">Ready to focus</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-4">
+                        <button id="start-btn" class="btn-primary px-6 py-2 rounded-full">
+                            <i class="fas fa-play mr-2"></i> Start
+                        </button>
+                        <button id="reset-btn" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-full">
+                            <i class="fas fa-redo mr-2"></i> Reset
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Timer Controls -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label for="work-duration" class="block text-sm font-medium mb-1">Work Duration (min)</label>
+                        <input type="number" id="work-duration" min="1" max="90" value="25" class="w-full px-3 py-2 border rounded-md">
+                    </div>
+                    <div>
+                        <label for="break-duration" class="block text-sm font-medium mb-1">Break Duration (min)</label>
+                        <input type="number" id="break-duration" min="1" max="30" value="5" class="w-full px-3 py-2 border rounded-md">
+                    </div>
+                </div>
+                
+                <!-- Session Counter -->
+                <div class="flex justify-between items-center bg-blue-50 rounded-lg p-3">
+                    <span class="text-sm font-medium">Today's Sessions:</span>
+                    <span id="session-counter" class="font-bold">0</span>
+                </div>
+            </div>
+            
+            <!-- Task Manager -->
+            <div class="task-container flex-1 card rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold">Tasks</h2>
+                    <button id="add-task-btn" class="btn-primary px-4 py-2 rounded-full">
+                        <i class="fas fa-plus mr-2"></i> Add Task
+                    </button>
+                </div>
+                
+                <!-- Task Input (hidden by default) -->
+                <div id="task-input-container" class="hidden mb-4">
+                    <div class="flex space-x-2">
+                        <input type="text" id="task-input" placeholder="What needs to be done?" class="flex-1 px-3 py-2 border rounded-md">
+                        <button id="save-task-btn" class="btn-primary px-4 py-2 rounded-md">
+                            Save
+                        </button>
+                    </div>
+                    <div class="mt-2 flex space-x-2">
+                        <select id="task-category" class="px-2 py-1 border rounded-md text-sm">
+                            <option value="study">Study</option>
+                            <option value="coding">Coding</option>
+                            <option value="exercise">Exercise</option>
+                            <option value="yoga">Yoga</option>
+                        </select>
+                        <select id="task-priority" class="px-2 py-1 border rounded-md text-sm">
+                            <option value="low">Low Priority</option>
+                            <option value="medium">Medium Priority</option>
+                            <option value="high">High Priority</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Task List -->
+                <div id="task-list" class="space-y-2">
+                    <!-- Tasks will be added here dynamically -->
+                    <div class="task-item bg-gray-50 rounded-lg p-3 flex items-center cursor-move">
+                        <input type="checkbox" class="mr-3 h-5 w-5 rounded border-gray-300">
+                        <div class="flex-1">
+                            <div class="font-medium">Complete math assignment</div>
+                            <div class="text-xs text-gray-500 flex items-center">
+                                <span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1"></span>
+                                Study • Medium Priority
+                            </div>
+                        </div>
+                        <button class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="task-item bg-gray-50 rounded-lg p-3 flex items-center cursor-move">
+                        <input type="checkbox" class="mr-3 h-5 w-5 rounded border-gray-300" checked>
+                        <div class="flex-1">
+                            <div class="font-medium line-through text-gray-400">Read chapter 3</div>
+                            <div class="text-xs text-gray-500 flex items-center">
+                                <span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1"></span>
+                                Study • Low Priority
+                            </div>
+                        </div>
+                        <button class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quote and Music Section -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Motivational Quote -->
+            <div class="card rounded-xl p-6 quote-container flex flex-col justify-center">
+                <div class="text-center">
+                    <i class="fas fa-quote-left text-gray-300 text-2xl mb-2"></i>
+                    <p id="motivational-quote" class="text-lg italic">"The secret of getting ahead is getting started."</p>
+                    <p id="quote-author" class="mt-2 text-sm text-gray-500">- Mark Twain</p>
+                </div>
+                <button id="new-quote-btn" class="mt-4 btn-secondary self-center px-4 py-2 rounded-full text-sm">
+                    <i class="fas fa-sync-alt mr-2"></i> New Quote
+                </button>
+            </div>
+            
+            <!-- Music Player -->
+            <div class="card rounded-xl p-6">
+                <h2 class="text-xl font-semibold mb-4">Focus Sounds</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <button class="sound-btn bg-gray-100 hover:bg-gray-200 rounded-lg p-3 flex items-center">
+                        <i class="fas fa-cloud-rain text-blue-500 mr-2"></i>
+                        <span>Rain</span>
+                    </button>
+                    <button class="sound-btn bg-gray-100 hover:bg-gray-200 rounded-lg p-3 flex items-center">
+                        <i class="fas fa-water text-blue-300 mr-2"></i>
+                        <span>Ocean</span>
+                    </button>
+                    <button class="sound-btn bg-gray-100 hover:bg-gray-200 rounded-lg p-3 flex items-center">
+                        <i class="fas fa-fire text-orange-500 mr-2"></i>
+                        <span>Fireplace</span>
+                    </button>
+                    <button class="sound-btn bg-gray-100 hover:bg-gray-200 rounded-lg p-3 flex items-center">
+                        <i class="fas fa-wind text-gray-400 mr-2"></i>
+                        <span>White Noise</span>
+                    </button>
+                </div>
+                <div class="mt-4 flex items-center">
+                    <i class="fas fa-volume-down text-gray-500 mr-2"></i>
+                    <input type="range" id="volume-control" min="0" max="100" value="50" class="flex-1">
+                    <i class="fas fa-volume-up text-gray-500 ml-2"></i>
+                </div>
+                <div class="mt-2 flex justify-between text-xs text-gray-500">
+                    <span>Off</span>
+                    <span>50%</span>
+                    <span>Max</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Focus Mode Overlay -->
+    <div id="focus-overlay" class="fixed inset-0 bg-black bg-opacity-90 z-20 hidden flex items-center justify-center">
+        <div class="text-center text-white max-w-md px-4">
+            <div id="focus-timer" class="text-7xl font-bold mb-4 pulse">25:00</div>
+            <div id="focus-message" class="text-2xl mb-6">Stay focused!</div>
+            <div id="focus-task" class="text-xl mb-8">Current Task: Math Assignment</div>
+            <div id="focus-quote" class="italic mb-8">"Concentration is the secret of strength." - Ralph Waldo Emerson</div>
+            <button id="exit-focus-btn" class="bg-white text-black px-6 py-3 rounded-full font-medium">
+                Exit Focus Mode
+            </button>
+        </div>
+    </div>
+
+    <!-- Audio Elements (hidden) -->
+    <audio id="rain-sound" loop src="https://cdn.pixabay.com/audio/2022/08/06/audio_4b514cb18f.mp3"></audio>
+    <audio id="ocean-sound" loop src="https://cdn.pixabay.com/audio/2025/03/19/audio_56ae1dae5f.mp3"></audio>
+    <audio id="fireplace-sound" loop src="https://assets.mixkit.co/sfx/preview/mixkit-crackling-fireplace-1245.mp3"></audio>
+    <audio id="white-noise-sound" loop src="https://cdn.pixabay.com/audio/2024/10/28/audio_5f2c78d4a7.mp3"></audio>
+
+    <script>
+        // DOM Elements
+        const timeDisplay = document.getElementById('time-display');
+        const timerState = document.getElementById('timer-state');
+        const startBtn = document.getElementById('start-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const progressCircle = document.getElementById('progress-circle');
+        const sessionCounter = document.getElementById('session-counter');
+        const workDurationInput = document.getElementById('work-duration');
+        const breakDurationInput = document.getElementById('break-duration');
+        const taskInputContainer = document.getElementById('task-input-container');
+        const taskInput = document.getElementById('task-input');
+        const addTaskBtn = document.getElementById('add-task-btn');
+        const saveTaskBtn = document.getElementById('save-task-btn');
+        const taskList = document.getElementById('task-list');
+        const taskCategory = document.getElementById('task-category');
+        const taskPriority = document.getElementById('task-priority');
+        const motivationalQuote = document.getElementById('motivational-quote');
+        const quoteAuthor = document.getElementById('quote-author');
+        const newQuoteBtn = document.getElementById('new-quote-btn');
+        const soundBtns = document.querySelectorAll('.sound-btn');
+        const volumeControl = document.getElementById('volume-control');
+        const focusOverlay = document.getElementById('focus-overlay');
+        const focusTimer = document.getElementById('focus-timer');
+        const focusMessage = document.getElementById('focus-message');
+        const focusTask = document.getElementById('focus-task');
+        const focusQuote = document.getElementById('focus-quote');
+        const exitFocusBtn = document.getElementById('exit-focus-btn');
+        const themeBtns = document.querySelectorAll('.theme-btn');
+        
+        // Audio Elements
+        const rainSound = document.getElementById('rain-sound');
+        const oceanSound = document.getElementById('ocean-sound');
+        const fireplaceSound = document.getElementById('fireplace-sound');
+        const whiteNoiseSound = document.getElementById('white-noise-sound');
+        
+        // Timer Variables
+        let timer;
+        let timeLeft = 25 * 60; // 25 minutes in seconds
+        let totalTime = 25 * 60;
+        let isRunning = false;
+        let isWorkTime = true;
+        let sessionsCompleted = 0;
+        
+        // Task Variables
+        let tasks = [
+            { id: 1, text: "Complete math assignment", category: "study", priority: "medium", completed: false },
+            { id: 2, text: "Read chapter 3", category: "study", priority: "low", completed: true }
+        ];
+        
+        // Quote Variables
+        const quotes = [
+            { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+            { text: "Concentration is the secret of strength.", author: "Ralph Waldo Emerson" },
+            { text: "Productivity is never an accident. It is always the result of a commitment to excellence, intelligent planning, and focused effort.", author: "Paul J. Meyer" },
+            { text: "The way to get started is to quit talking and begin doing.", author: "Walt Disney" },
+            { text: "Focus on being productive instead of busy.", author: "Tim Ferriss" },
+            { text: "You don't have to be great to start, but you have to start to be great.", author: "Zig Ziglar" },
+            { text: "The successful warrior is the average man, with laser-like focus.", author: "Bruce Lee" },
+            { text: "Concentrate all your thoughts upon the work at hand. The sun's rays do not burn until brought to a focus.", author: "Alexander Graham Bell" }
+        ];
+        
+        // Sound Variables
+        let currentSound = null;
+        let currentVolume = 0.5;
+        
+        // Initialize the app
+        function init() {
+            updateTimerDisplay();
+            renderTasks();
+            displayRandomQuote();
+            setupEventListeners();
+            setupDragAndDrop();
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Timer controls
+            startBtn.addEventListener('click', toggleTimer);
+            resetBtn.addEventListener('click', resetTimer);
+            
+            // Task controls
+            addTaskBtn.addEventListener('click', showTaskInput);
+            saveTaskBtn.addEventListener('click', addTask);
+            
+            // Quote controls
+            newQuoteBtn.addEventListener('click', displayRandomQuote);
+            
+            // Sound controls
+            soundBtns.forEach(btn => {
+                btn.addEventListener('click', () => playSound(btn.textContent.trim()));
+            });
+            
+            volumeControl.addEventListener('input', updateVolume);
+            
+            // Focus mode controls
+            exitFocusBtn.addEventListener('click', exitFocusMode);
+            
+            // Theme controls
+            themeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const theme = btn.dataset.theme;
+                    document.body.className = `theme-${theme} min-h-screen font-sans`;
+                });
+            });
+        }
+        
+        // Timer functions
+        function toggleTimer() {
+            if (isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+                enterFocusMode();
+            }
+        }
+        
+        function startTimer() {
+            if (!isRunning) {
+                isRunning = true;
+                startBtn.innerHTML = '<i class="fas fa-pause mr-2"></i> Pause';
+                timerState.textContent = isWorkTime ? 'Focusing...' : 'On break';
+                
+                timer = setInterval(() => {
+                    timeLeft--;
+                    updateTimerDisplay();
+                    
+                    if (timeLeft <= 0) {
+                        timerComplete();
+                    }
+                }, 1000);
+            }
+        }
+        
+        function pauseTimer() {
+            if (isRunning) {
+                clearInterval(timer);
+                isRunning = false;
+                startBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Resume';
+                timerState.textContent = 'Paused';
+            }
+        }
+        
+        function resetTimer() {
+            clearInterval(timer);
+            isRunning = false;
+            isWorkTime = true;
+            const duration = parseInt(workDurationInput.value) * 60;
+            timeLeft = duration;
+            totalTime = duration;
+            updateTimerDisplay();
+            startBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Start';
+            timerState.textContent = 'Ready to focus';
+            updateProgressCircle();
+        }
+        
+        function timerComplete() {
+            clearInterval(timer);
+            isRunning = false;
+            
+            if (isWorkTime) {
+                sessionsCompleted++;
+                sessionCounter.textContent = sessionsCompleted;
+                isWorkTime = false;
+                timeLeft = parseInt(breakDurationInput.value) * 60;
+                totalTime = timeLeft;
+                timerState.textContent = 'Break time!';
+                displayRandomQuote();
+                
+                // Notification
+                showNotification("Great job! Time for a break.");
+            } else {
+                isWorkTime = true;
+                timeLeft = parseInt(workDurationInput.value) * 60;
+                totalTime = timeLeft;
+                timerState.textContent = 'Ready to focus';
+                
+                // Notification
+                showNotification("Break's over! Ready to focus again?");
+            }
+            
+            updateTimerDisplay();
+            startBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Start';
+            updateProgressCircle();
+            
+            // Play notification sound
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3');
+            audio.volume = currentVolume;
+            audio.play();
+        }
+        
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const display = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            timeDisplay.textContent = display;
+            if (focusOverlay.style.display === 'flex') {
+                focusTimer.textContent = display;
+            }
+            updateProgressCircle();
+        }
+        
+        function updateProgressCircle() {
+            const circumference = 2 * Math.PI * 40;
+            const offset = circumference - (timeLeft / totalTime) * circumference;
+            progressCircle.style.strokeDashoffset = offset;
+        }
+        
+        // Task functions
+        function showTaskInput() {
+            taskInputContainer.classList.toggle('hidden');
+            if (!taskInputContainer.classList.contains('hidden')) {
+                taskInput.focus();
+            }
+        }
+        
+        function addTask() {
+            const taskText = taskInput.value.trim();
+            if (taskText) {
+                const newTask = {
+                    id: Date.now(),
+                    text: taskText,
+                    category: taskCategory.value,
+                    priority: taskPriority.value,
+                    completed: false
+                };
+                
+                tasks.unshift(newTask);
+                renderTasks();
+                taskInput.value = '';
+                taskInputContainer.classList.add('hidden');
+            }
+        }
+        
+        function renderTasks() {
+            taskList.innerHTML = '';
+            
+            tasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.className = `task-item bg-gray-50 rounded-lg p-3 flex items-center cursor-move ${task.completed ? 'opacity-70' : ''}`;
+                taskItem.dataset.id = task.id;
+                taskItem.draggable = true;
+                
+                // Determine color based on category
+                let categoryColor = 'blue-500';
+                if (task.category === 'coding') categoryColor = 'green-500';
+                else if (task.category === 'exercise') categoryColor = 'orange-500';
+                else if (task.category === 'yoga') categoryColor = 'green-400';
+                
+                // Determine priority text
+                let priorityText = '';
+                if (task.priority === 'low') priorityText = 'Low Priority';
+                else if (task.priority === 'medium') priorityText = 'Medium Priority';
+                else if (task.priority === 'high') priorityText = 'High Priority';
+                
+                taskItem.innerHTML = `
+                    <input type="checkbox" class="mr-3 h-5 w-5 rounded border-gray-300" ${task.completed ? 'checked' : ''}>
+                    <div class="flex-1">
+                        <div class="font-medium ${task.completed ? 'line-through text-gray-400' : ''}">${task.text}</div>
+                        <div class="text-xs text-gray-500 flex items-center">
+                            <span class="inline-block w-2 h-2 rounded-full bg-${categoryColor} mr-1"></span>
+                            ${task.category.charAt(0).toUpperCase() + task.category.slice(1)} • ${priorityText}
+                        </div>
+                    </div>
+                    <button class="delete-task text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                // Add event listeners to the new elements
+                const checkbox = taskItem.querySelector('input[type="checkbox"]');
+                checkbox.addEventListener('change', () => toggleTaskComplete(task.id));
+                
+                const deleteBtn = taskItem.querySelector('.delete-task');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteTask(task.id);
+                });
+                
+                taskList.appendChild(taskItem);
+            });
+        }
+        
+        function toggleTaskComplete(taskId) {
+            const taskIndex = tasks.findIndex(task => task.id === taskId);
+            if (taskIndex !== -1) {
+                tasks[taskIndex].completed = !tasks[taskIndex].completed;
+                renderTasks();
+            }
+        }
+        
+        function deleteTask(taskId) {
+            tasks = tasks.filter(task => task.id !== taskId);
+            renderTasks();
+        }
+        
+        // Drag and drop functionality
+        function setupDragAndDrop() {
+            let draggedItem = null;
+            
+            taskList.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('task-item')) {
+                    draggedItem = e.target;
+                    setTimeout(() => {
+                        e.target.classList.add('dragging');
+                    }, 0);
+                }
+            });
+            
+            taskList.addEventListener('dragend', (e) => {
+                if (e.target.classList.contains('task-item')) {
+                    e.target.classList.remove('dragging');
+                }
+            });
+            
+            taskList.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(e.clientY);
+                if (afterElement == null) {
+                    taskList.appendChild(draggedItem);
+                } else {
+                    taskList.insertBefore(draggedItem, afterElement);
+                }
+            });
+            
+            function getDragAfterElement(y) {
+                const draggableElements = [...taskList.querySelectorAll('.task-item:not(.dragging)')];
+                
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+        }
+        
+        // Quote functions
+        function displayRandomQuote() {
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            const quote = quotes[randomIndex];
+            motivationalQuote.textContent = `"${quote.text}"`;
+            quoteAuthor.textContent = `- ${quote.author}`;
+            
+            if (focusOverlay.style.display === 'flex') {
+                focusQuote.textContent = `"${quote.text}" - ${quote.author}`;
+            }
+        }
+        
+        // Sound functions
+        function playSound(soundName) {
+            // Stop any currently playing sound
+            if (currentSound) {
+                currentSound.pause();
+                currentSound.currentTime = 0;
+            }
+            
+            // Reset all sound buttons
+            soundBtns.forEach(btn => {
+                btn.classList.remove('bg-blue-100', 'border-blue-300');
+                btn.classList.add('bg-gray-100', 'hover:bg-gray-200');
+            });
+            
+            // Play the selected sound
+            let soundElement;
+            switch (soundName.toLowerCase()) {
+                case 'rain':
+                    soundElement = rainSound;
+                    soundBtns[0].classList.add('bg-blue-100', 'border-blue-300');
+                    soundBtns[0].classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                    break;
+                case 'ocean':
+                    soundElement = oceanSound;
+                    soundBtns[1].classList.add('bg-blue-100', 'border-blue-300');
+                    soundBtns[1].classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                    break;
+                case 'fireplace':
+                    soundElement = fireplaceSound;
+                    soundBtns[2].classList.add('bg-blue-100', 'border-blue-300');
+                    soundBtns[2].classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                    break;
+                case 'white noise':
+                    soundElement = whiteNoiseSound;
+                    soundBtns[3].classList.add('bg-blue-100', 'border-blue-300');
+                    soundBtns[3].classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                    break;
+                default:
+                    return;
+            }
+            
+            soundElement.volume = currentVolume;
+            soundElement.play();
+            currentSound = soundElement;
+        }
+        
+        function updateVolume() {
+            currentVolume = volumeControl.value / 100;
+            if (currentSound) {
+                currentSound.volume = currentVolume;
+            }
+        }
+        
+        // Focus mode functions
+        function enterFocusMode() {
+            // Get current task (first uncompleted task)
+            const currentTask = tasks.find(task => !task.completed);
+            
+            if (currentTask) {
+                focusTask.textContent = `Current Task: ${currentTask.text}`;
+            } else {
+                focusTask.textContent = "No current task";
+            }
+            
+            focusTimer.textContent = timeDisplay.textContent;
+            focusMessage.textContent = isWorkTime ? 'Stay focused!' : 'Enjoy your break!';
+            displayRandomQuote();
+            
+            focusOverlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function exitFocusMode() {
+            focusOverlay.style.display = 'none';
+            document.body.style.overflow = '';
+            pauseTimer();
+        }
+        
+        // Notification function
+        function showNotification(message) {
+            // Check if the browser supports notifications
+            if (!("Notification" in window)) {
+                console.log("This browser does not support desktop notification");
+                return;
+            }
+            
+            // Check if notification permissions have already been granted
+            if (Notification.permission === "granted") {
+                // If it's okay let's create a notification
+                new Notification("FocusMate", {
+                    body: message,
+                    icon: "https://cdn-icons-png.flaticon.com/512/2965/2965879.png"
+                });
+            }
+            
+            // Otherwise, we need to ask the user for permission
+            else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(function (permission) {
+                    // If the user accepts, let's create a notification
+                    if (permission === "granted") {
+                        new Notification("FocusMate", {
+                            body: message,
+                            icon: "https://cdn-icons-png.flaticon.com/512/2965/2965879.png"
+                        });
+                    }
+                });
+            }
+        }
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
